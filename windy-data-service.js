@@ -328,7 +328,7 @@ class ChinaCalibratedDataService {
         this.cache = new Map();
         this.cacheTimeout = 30 * 60 * 1000;
         this.enableChinaCalibration = true;
-        this.windyApiKey = 'gE7AqAGKM8h6TcgHDoseU8HmmddSqQka';
+        this.windyApiKey = localStorage.getItem('windy_api_key') || 'gE7AqAGKM8h6TcgHDoseU8HmmddSqQka';
         this.useRealAPI = localStorage.getItem('use_real_api') === 'true';
     }
 
@@ -660,6 +660,8 @@ class ChinaCalibratedDataService {
             
         } catch (error) {
             console.error('Windy API调用失败:', error);
+            console.log('ℹ️ 回退到模拟数据');
+            return this.generateMockData(coordinates, date);
             console.log('ℹ️ 回退到模拟数据');
             return this.generateMockData(coordinates, date);
         }

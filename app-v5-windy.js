@@ -481,12 +481,26 @@ class SurfForecastAppV5 {
             '✅ 中国数据校准已启用！' : 
             '❌ 中国数据校准已关闭';
         
-        alert(message);
+        this.showNotification(message);
     }
 
     showError(message) {
         console.error(message);
-        alert(message);
+        this.showNotification(message, 'error');
+    }
+
+    showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed; top: 20px; right: 20px; z-index: 10000;
+            padding: 15px 20px; border-radius: 8px; color: white;
+            background: ${type === 'error' ? '#f44336' : '#4CAF50'};
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        `;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 3000);
     }
 
     formatTideSchedule(schedule) {
@@ -548,7 +562,9 @@ function toggleRealAPI() {
         '✅ 已启用Windy真实API！' : 
         '📊 已切换到模拟数据';
     
-    alert(message);
+    if (window.app) {
+        app.showNotification(message);
+    }
 }
 
 function openConfig() {
