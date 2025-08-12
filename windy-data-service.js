@@ -358,8 +358,13 @@ class ChinaCalibratedDataService {
 
     toggleRealAPI(enabled) {
         this.useRealAPI = enabled;
+        // 重新读取API密钥
+        this.windyApiKey = localStorage.getItem('windy_api_key') || this.getDefaultApiKey();
         localStorage.setItem('use_real_api', enabled.toString());
         console.log(enabled ? '🌊 已启用Windy真实API' : '📊 已切换到模拟数据');
+        
+        // 清理缓存以强制重新加载数据
+        this.cache.clear();
     }
 
     async getAllData(coordinates, date) {

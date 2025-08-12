@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API配置 - 中国冲浪预测系统</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #1e3c72;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .api-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            background: #f8f9fa;
+        }
+        .api-title {
+            font-weight: bold;
+            color: #2e7d32;
+            margin-bottom: 10px;
+        }
+        .api-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .api-status {
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+        .status-configured {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+        .status-missing {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+        .btn {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        .btn:hover {
+            background: #45a049;
+        }
+        .btn-secondary {
+            background: #2196F3;
+        }
+        .btn-secondary:hover {
+            background: #1976d2;
+        }
+        .btn-danger {
+            background: #f44336;
+        }
+        .btn-danger:hover {
+            background: #d32f2f;
+        }
+        .instructions {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196F3;
+        }
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .back-link a {
+            color: #2196F3;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔑 API密钥配置</h1>
+        
+        <div class="instructions">
+            <h3>📋 使用说明</h3>
+            <p>1. 配置Windy API密钥后，点击"🌊 切换API"按钮启用真实数据</p>
+            <p>2. 未配置密钥时，系统将使用模拟数据</p>
+            <p>3. 所有密钥都存储在浏览器本地，不会上传到服务器</p>
+        </div>
+
+        <div class="api-section">
+            <div class="api-title">🌊 Windy API (推荐)</div>
+            <div id="windyStatus" class="api-status status-missing">❌ 未配置</div>
+            <input type="text" id="windyKey" class="api-input" placeholder="请输入Windy API密钥">
+            <div>
+                <button class="btn" onclick="saveWindyKey()">💾 保存</button>
+                <button class="btn btn-secondary" onclick="testWindyKey()">🧪 测试</button>
+                <button class="btn btn-danger" onclick="clearWindyKey()">🗑️ 清除</button>
+            </div>
+            <small>获取地址: <a href="https://api4.windy.com/api-key" target="_blank">https://api4.windy.com/api-key</a></small>
+        </div>
+
+        <div class="api-section">
+            <div class="api-title">📊 当前配置状态</div>
+            <div id="configStatus">
+                <p><strong>数据模式:</strong> <span id="currentMode">模拟数据</span></p>
+                <p><strong>中国校准:</strong> <span id="calibrationMode">已启用</span></p>
+                <p><strong>配置时间:</strong> <span id="configTime">-</span></p>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <button class="btn btn-secondary" onclick="refreshStatus()">🔄 刷新状态</button>
+            <button class="btn" onclick="window.close()">✅ 完成配置</button>
+        </div>
+
+        <div class="back-link">
+            <a href="javascript:window.close()">← 返回主页面</a>
+        </div>
+    </div>
+
+    <script>
+        // 页面加载时更新状态
+        window.onload = function() {
+            updateStatus();
+        };
+
+        function saveWindyKey() {
+            const key = document.getElementById('windyKey').value.trim();
+            if (!key) {
+                alert('请输入有效的API密钥');
+                return;
+            }
+            
+            localStorage.setItem('windy_api_key', key);
+            updateStatus();
+            alert('✅ Windy API密钥已保存');
+        }
+
+        function testWindyKey() {
+            const key = localStorage.getItem('windy_api_key');
+            if (!key) {
+                alert('请先保存API密钥');
+                return;
+            }
+            
+            alert('🧪 API测试功能开发中...\n请在主页面点击"切换API"测试真实数据');
+        }
+
+        function clearWindyKey() {
+            if (confirm('确定要清除Windy API密钥吗？')) {
+                localStorage.removeItem('windy_api_key');
+                document.getElementById('windyKey').value = '';
+                updateStatus();
+                alert('🗑️ API密钥已清除');
+            }
+        }
+
+        function updateStatus() {
+            const windyKey = localStorage.getItem('windy_api_key');
+            const windyStatus = document.getElementById('windyStatus');
+            const windyInput = document.getElementById('windyKey');
+            
+            if (windyKey) {
+                windyStatus.textContent = '✅ 已配置';
+                windyStatus.className = 'api-status status-configured';
+                windyInput.value = windyKey.substring(0, 8) + '...';
+            } else {
+                windyStatus.textContent = '❌ 未配置';
+                windyStatus.className = 'api-status status-missing';
+                windyInput.value = '';
+            }
+
+            // 更新配置状态
+            const useRealAPI = localStorage.getItem('use_real_api') === 'true';
+            const calibrationEnabled = localStorage.getItem('china_calibration_enabled') !== 'false';
+            
+            document.getElementById('currentMode').textContent = useRealAPI ? 'Windy真实API' : '模拟数据';
+            document.getElementById('calibrationMode').textContent = calibrationEnabled ? '已启用' : '已关闭';
+            document.getElementById('configTime').textContent = new Date().toLocaleString('zh-CN');
+        }
+
+        function refreshStatus() {
+            updateStatus();
+            alert('🔄 状态已刷新');
+        }
+    </script>
+</body>
+</html>
