@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏄寻找中国最佳冲浪点</title>
+    <link rel="stylesheet" href="styles-v3.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <header class="header">
+            <h1 style="color: white;">🏄寻找中国最佳冲浪点</h1>
+            <p>7天详细预测 AI智能解读推荐</p>
+            <div class="beta-notice">🇨🇳 集成中国权威海洋数据校准，预测更准确</div>
+            
+            <!-- 数据源状态 -->
+            <div class="data-source-status" id="dataSourceStatus">
+                <span id="dataSourceIndicator">📊 模拟数据模式</span>
+                <button class="config-btn" onclick="openConfig()">⚙️ API配置</button>
+                <button class="config-btn" onclick="toggleCalibration()" id="calibrationBtn">🇨🇳 校准开启</button>
+                <button class="config-btn api-toggle-btn" onclick="toggleRealAPI()" id="apiToggleBtn">🌊 切换API</button>
+            </div>
+        </header>
+
+        <!-- 校准状态面板 -->
+        <section class="calibration-panel" id="calibrationPanel">
+            <h3>🇨🇳 中国数据校准状态</h3>
+            <div id="calibrationStatus" class="calibration-content">
+                <div class="loading">正在检查校准状态...</div>
+            </div>
+        </section>
+
+        <!-- 日期选择 - 移动到TOP3推荐上面 -->
+        <div class="date-selector">
+            <h3 class="date-selector-title">📅 选择预测日期</h3>
+            <div id="dateButtons" class="date-buttons"></div>
+        </div>
+
+        <!-- 全国TOP3 AI推荐面板 -->
+        <section class="ai-recommendation">
+            <h2>🏆 全国TOP3浪点推荐</h2>
+            <div id="globalAiAnalysis" class="ai-content">
+                <div class="loading">正在分析全国最佳冲浪条件...</div>
+            </div>
+        </section>
+
+        <!-- 地区选择 -->
+        <nav class="region-nav">
+            <button class="region-btn active" data-region="all">全部浪点</button>
+            <button class="region-btn" data-region="zhoushan">舟山群岛</button>
+            <button class="region-btn" data-region="qingdao">青岛海岸</button>
+        </nav>
+
+        <!-- 浪点展示区域 -->
+        <main class="spots-container">
+            <div id="spotsGrid" class="spots-grid"></div>
+        </main>
+
+        <!-- 详细信息模态框 -->
+        <div id="detailModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <div id="modalContent"></div>
+            </div>
+        </div>
+
+        <!-- 底部信息 -->
+        <footer class="footer">
+            <div class="footer-content">
+                <p>中国冲浪预报致力于提供准确的中国海岸线冲浪条件预测和解读，本网站所有预测原始数据来自公开信息，经AI解读后供冲浪爱好者参考，如有任何建议，请联系wing394499753@126.com</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- 修复后的脚本引用 -->
+    <script src="windy-data-service.js"></script>
+    <script src="app-v5-windy.js"></script>
+</body>
+</html>
