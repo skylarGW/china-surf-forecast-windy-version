@@ -20,6 +20,11 @@ class SurfForecastAppV5 {
 
     initDateSelector() {
         const dateButtons = document.getElementById('dateButtons');
+        if (!dateButtons) {
+            console.error('dateButtons element not found');
+            return;
+        }
+        
         const today = new Date();
         
         for (let i = 0; i < 7; i++) {
@@ -28,9 +33,10 @@ class SurfForecastAppV5 {
             
             const button = document.createElement('button');
             button.className = `date-btn ${i === 0 ? 'active' : ''}`;
-            button.textContent = i === 0 ? '今天' : 
+            const buttonText = i === 0 ? '今天' : 
                                i === 1 ? '明天' : 
                                `${date.getMonth() + 1}/${date.getDate()}`;
+            button.textContent = buttonText;
             button.onclick = () => this.selectDate(date, button);
             
             dateButtons.appendChild(button);
@@ -39,6 +45,11 @@ class SurfForecastAppV5 {
 
     initRegionSelector() {
         const regionBtns = document.querySelectorAll('.region-btn');
+        if (regionBtns.length === 0) {
+            console.error('region-btn elements not found');
+            return;
+        }
+        
         regionBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 regionBtns.forEach(b => b.classList.remove('active'));
@@ -51,18 +62,34 @@ class SurfForecastAppV5 {
 
     initModal() {
         const modal = document.getElementById('detailModal');
+        if (!modal) {
+            console.error('detailModal element not found');
+            return;
+        }
+        
         const closeBtn = modal.querySelector('.close');
+        if (!closeBtn) {
+            console.error('close button not found in modal');
+            return;
+        }
         
         closeBtn.onclick = () => modal.style.display = 'none';
         window.onclick = (e) => {
-            if (e.target === modal) modal.style.display = 'none';
+            if (e.target === modal && modal.style.display !== 'none') {
+                modal.style.display = 'none';
+            }
         };
     }
 
     initChinaCalibration() {
-        const savedCalibration = localStorage.getItem('china_calibration_enabled');
-        if (savedCalibration !== null) {
-            this.calibrationEnabled = savedCalibration === 'true';
+        try {
+            const savedCalibration = localStorage.getItem('china_calibration_enabled');
+            if (savedCalibration !== null) {
+                this.calibrationEnabled = savedCalibration === 'true';
+            }
+        } catch (error) {
+            console.error('Failed to access localStorage:', error);
+            this.calibrationEnabled = true; // 默认启用
         }
         
         this.updateCalibrationStatus();
@@ -307,9 +334,15 @@ class SurfForecastAppV5 {
         const scores = analysis.scores || {};
         const suggestion = analysis.suggestion || {};
 
+        const escapeHtml = (text) => {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        };
+        
         content.innerHTML = `
-            <h2>${spot.name} - 专业分析报告</h2>
-            <p class="spot-description">${spot.description}</p>
+            <h2>${escapeHtml(spot.name)} - 专业分析报告</h2>
+            <p class="spot-description">${escapeHtml(spot.description)}</p>
             <p class="spot-coordinates">📍 坐标: ${UTILS.formatCoordinates(spot.coordinates)}</p>
             
             <!-- 24小时详细数据表格 -->
@@ -372,7 +405,7 @@ class SurfForecastAppV5 {
                 <h3>☀️ 当前天气分析 (评分: ${(scores.weatherScore || 0).toFixed(1)}/10)</h3>
                 <div class="detail-grid">
                     <div class="detail-item">
-                        <strong>天气:</strong> ${data.weather.condition}
+                        <strong>天气:</strong> ${escapeHtml(data.weather.condition)}
                     </div>
                     <div class="detail-item">
                         <strong>气温:</strong> ${data.weather.temperature}°C
@@ -393,7 +426,7 @@ class SurfForecastAppV5 {
                 <div class="ai-subsection">
                     <h4>🏄 装备建议</h4>
                     <div class="suggestions-list">
-                        ${(suggestion.equipment || ['数据加载中...']).map(e => `<div class="equipment-item">🏄 ${e}</div>`).join('')}
+                        ${(suggestion.equipment || ['数据加载中...']).map(e => `<div class="equipment-item">🏄 ${escapeHtml(e)}</div>`).join('')}
                     </div>
                 </div>
                 
@@ -401,7 +434,7 @@ class SurfForecastAppV5 {
                 <div class="ai-subsection">
                     <h4>📈 适合人群</h4>
                     <div class="suggestions-list">
-                        ${(suggestion.skillLevel || ['分析中...']).map(s => `<div class="skill-item">👤 ${s}</div>`).join('')}
+                        ${(suggestion.skillLevel || ['分析中...']).map(s => `<div class="skill-item">👤 ${escapeHtml(s)}</div>`).join('')}
                     </div>
                 </div>
                 
@@ -409,13 +442,13 @@ class SurfForecastAppV5 {
                 <div class="ai-subsection">
                     <h4>💡 冲浪建议</h4>
                     <div class="suggestions-list">
-                        ${(suggestion.suggestions || ['数据分析中']).map(s => `<div class="suggestion-item">✅ ${s}</div>`).join('')}
-                        ${(suggestion.warnings || []).map(w => `<div class="warning-item">⚠️ ${w}</div>`).join('')}
+                        ${(suggestion.suggestions || ['数据分析中']).map(s => `<div class="suggestion-item">✅ ${escapeHtml(s)}</div>`).join('')}
+                        ${(suggestion.warnings || []).map(w => `<div class="warning-item">⚠️ ${escapeHtml(w)}</div>`).join('')}
                     </div>
                 </div>
                 
                 <div class="final-summary">
-                    <strong>AI总结:</strong> ${suggestion.summary || '数据分析中...'}
+                    <strong>AI总结:</strong> ${escapeHtml(suggestion.summary || '数据分析中...')}
                 </div>
             </div>
         `;
@@ -500,7 +533,11 @@ class SurfForecastAppV5 {
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         `;
         document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 3000);
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 3000);
     }
 
     formatTideSchedule(schedule) {

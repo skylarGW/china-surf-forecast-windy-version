@@ -328,7 +328,7 @@ class ChinaCalibratedDataService {
         this.cache = new Map();
         this.cacheTimeout = 30 * 60 * 1000;
         this.enableChinaCalibration = true;
-        this.windyApiKey = localStorage.getItem('windy_api_key') || 'gE7AqAGKM8h6TcgHDoseU8HmmddSqQka';
+        this.windyApiKey = localStorage.getItem('windy_api_key') || this.getDefaultApiKey();
         this.useRealAPI = localStorage.getItem('use_real_api') === 'true';
     }
 
@@ -609,6 +609,11 @@ class ChinaCalibratedDataService {
         }
     }
 
+    getDefaultApiKey() {
+        // 用户需要在localStorage中设置'windy_api_key'或通过API配置页面设置
+        return null; // 强制用户配置自己的API密钥
+    }
+
     getDataSourceInfo() {
         let mode, sources;
         
@@ -628,16 +633,21 @@ class ChinaCalibratedDataService {
         
         return { mode, sources };
     }
-}
-
     // Windy API真实数据获取
     async getWindyRealData(coordinates, date) {
+        if (!this.windyApiKey) {
+            console.warn('⚠️ Windy API密钥未配置，请在API配置页面设置');
+            return this.generateMockData(coordinates, date);
+        }
+        
         try {
             const response = await fetch('https://api.windy.com/api/point-forecast/v2', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
+                credentials: 'same-origin',
                 body: JSON.stringify({
                     key: this.windyApiKey,
                     lat: coordinates.lat,
@@ -660,8 +670,6 @@ class ChinaCalibratedDataService {
             
         } catch (error) {
             console.error('Windy API调用失败:', error);
-            console.log('ℹ️ 回退到模拟数据');
-            return this.generateMockData(coordinates, date);
             console.log('ℹ️ 回退到模拟数据');
             return this.generateMockData(coordinates, date);
         }
