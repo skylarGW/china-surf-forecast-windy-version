@@ -457,8 +457,8 @@ class ChinaCalibratedDataService {
         }
         
         // 回退到原有逻辑（如果校准助手未加载）
-        const baseWave = 0.5 + Math.random() * 1.2; // 降低基础浪高
-        const baseWind = 6 + Math.random() * 8;     // 降低基础风速
+        const baseWave = 0.4 + Math.random() * 0.8; // 进一步降低基础浪高 (0.4-1.2m)
+        const baseWind = 5 + Math.random() * 6;     // 进一步降低基础风速 (5-11节)
         const baseTemp = 18 + Math.random() * 10;
         const currentWaveHeight = Math.round(baseWave * 10) / 10;
 
@@ -494,8 +494,6 @@ class ChinaCalibratedDataService {
             hourly: this.generate24HourData(coordinates, date, currentWaveHeight)
         };
         
-        // 数据一致性检查
-        const hourlyAvg = (mockData.hourly.waveHeight.reduce((a,b) => a+b, 0) / 24).toFixed(1);
         // 数据一致性检查
         const hourlyAvg = (mockData.hourly.waveHeight.reduce((a,b) => a+b, 0) / 24).toFixed(1);
         const difference = Math.abs(currentWaveHeight - parseFloat(hourlyAvg)).toFixed(1);
@@ -602,16 +600,16 @@ class ChinaCalibratedDataService {
     }
 
     getCalibrationFactors(spotId) {
-        // 更保守的校准因子，避免数据过高
+        // 非常保守的校准因子，确保8月东沙不超过1.5m
         const factors = {
-            1: { wave: 0.9, wind: 0.85, tempOffset: 1.5 },  // 东沙：降低浪高
-            2: { wave: 0.85, wind: 0.9, tempOffset: 1.2 },  // 岱山：降低浪高
-            3: { wave: 0.8, wind: 0.95, tempOffset: -0.8 }, // 石老人：显著降低
-            4: { wave: 0.85, wind: 0.9, tempOffset: -0.5 }, // 流清河：降低浪高
-            5: { wave: 0.9, wind: 0.9, tempOffset: -0.3 }   // 黄岛：降低浪高
+            1: { wave: 0.7, wind: 0.8, tempOffset: 1.5 },   // 东沙：大幅降低
+            2: { wave: 0.65, wind: 0.8, tempOffset: 1.2 },  // 岱山：大幅降低
+            3: { wave: 0.6, wind: 0.85, tempOffset: -0.8 }, // 石老人：最大降幅
+            4: { wave: 0.65, wind: 0.8, tempOffset: -0.5 }, // 流清河：大幅降低
+            5: { wave: 0.7, wind: 0.8, tempOffset: -0.3 }   // 黄岛：大幅降低
         };
         
-        return factors[spotId] || { wave: 0.85, wind: 0.9, tempOffset: 0 };
+        return factors[spotId] || { wave: 0.65, wind: 0.8, tempOffset: 0 };
     }
 
     getSpotIdFromCoordinates(coordinates) {
