@@ -491,7 +491,8 @@ class SurfForecastAppV5 {
 
     updateDataSourceStatus() {
         const statusElement = document.getElementById('dataSourceIndicator');
-        const useRealAPI = localStorage.getItem('use_real_api') === 'true';
+        // 使用dataService的实际状态，而不是localStorage
+        const useRealAPI = dataService.useRealAPI;
         
         if (useRealAPI) {
             statusElement.innerHTML = '🌊 Windy真实API';
@@ -500,6 +501,8 @@ class SurfForecastAppV5 {
             statusElement.innerHTML = '📊 模拟数据模式';
             statusElement.className = 'data-source-sim';
         }
+        
+        console.log(`🔄 状态更新: ${useRealAPI ? 'Windy真实API' : '模拟数据'}`);
     }
 
     toggleCalibration() {
