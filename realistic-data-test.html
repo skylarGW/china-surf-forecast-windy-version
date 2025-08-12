@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>真实数据对比测试</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .data-card {
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        .data-card h3 {
+            margin: 0 0 15px 0;
+            color: #1976d2;
+        }
+        .wave-height {
+            font-size: 32px;
+            font-weight: bold;
+            color: #2e7d32;
+            margin: 15px 0;
+        }
+        .realistic { border-left: 4px solid #4CAF50; }
+        .old-version { border-left: 4px solid #f44336; }
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        .stats-table th, .stats-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .stats-table th {
+            background: #e3f2fd;
+            font-weight: bold;
+        }
+        .improvement {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .reference-data {
+            background: #fff3e0;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #ff9800;
+        }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌊 真实数据对比测试</h1>
+        <p>对比修复前后的数据生成效果，验证与真实海况的符合度</p>
+        
+        <div class="reference-data">
+            <h3>📊 真实海况参考数据</h3>
+            <p><strong>数据来源：</strong>Surfline, Magic Seaweed, 中国海洋预报台</p>
+            <ul>
+                <li><strong>东沙冲浪公园：</strong>夏季 0.3-1.2m，秋季 0.8-2.5m，冬季 1.0-3.0m</li>
+                <li><strong>岱山鹿栏：</strong>夏季 0.2-1.0m，秋季 0.6-2.2m，冬季 0.8-2.8m</li>
+                <li><strong>青岛海岸：</strong>夏季 0.4-1.5m，秋季 0.8-2.8m，冬季 1.2-3.5m</li>
+            </ul>
+        </div>
+        
+        <button onclick="runComparison()">🧪 运行对比测试</button>
+        <button onclick="generateReport()">📋 生成报告</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script src="data-calibration-helper.js"></script>
+    <script src="windy-data-service.js"></script>
+    <script>
+        const spots = [
+            { id: 1, name: '东沙冲浪公园', coordinates: { lat: 30.0444, lng: 122.1067 } },
+            { id: 2, name: '岱山鹿栏', coordinates: { lat: 30.2644, lng: 122.2067 } },
+            { id: 3, name: '石老人海水浴场', coordinates: { lat: 36.1000, lng: 120.4667 } },
+            { id: 4, name: '流清河海水浴场', coordinates: { lat: 36.0500, lng: 120.3167 } },
+            { id: 5, name: '黄岛两河口', coordinates: { lat: 35.9667, lng: 120.1833 } }
+        ];
+
+        async function runComparison() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div>🔄 正在生成对比数据...</div>';
+            
+            let html = '<h2>📊 数据对比结果</h2>';
+            
+            for (const spot of spots) {
+                // 生成新版本（校准后）数据
+                const newData = calibrationHelper.generateCalibratedMockData(
+                    spot.coordinates, 
+                    new Date(), 
+                    spot.id
+                );
+                
+                // 生成旧版本数据（模拟原有逻辑）
+                const oldData = generateOldVersionData();
+                
+                // 验证新数据
+                const validation = calibrationHelper.validateAndSuggest(newData, spot.id, new Date());
+                
+                html += `
+                    <div class="comparison-grid">
+                        <div class="data-card realistic">
+                            <h3>✅ 新版本 - ${spot.name}</h3>
+                            <div class="wave-height">${newData.windy.waveHeight}m</div>
+                            <table class="stats-table">
+                                <tr><th>风速</th><td>${newData.windy.windSpeed}节</td></tr>
+                                <tr><th>水温</th><td>${newData.ocean.waterTemperature}°C</td></tr>
+                                <tr><th>天气</th><td>${newData.weather.condition}</td></tr>
+                                <tr><th>校准方法</th><td>${newData.calibrationInfo?.method || '季节性校准'}</td></tr>
+                            </table>
+                            <div class="improvement">
+                                真实度评分: ${validation.isRealistic ? '✅ 优秀' : '⚠️ 需调整'}
+                            </div>
+                        </div>
+                        
+                        <div class="data-card old-version">
+                            <h3>❌ 旧版本 - ${spot.name}</h3>
+                            <div class="wave-height">${oldData.waveHeight}m</div>
+                            <table class="stats-table">
+                                <tr><th>风速</th><td>${oldData.windSpeed}节</td></tr>
+                                <tr><th>水温</th><td>${oldData.waterTemperature}°C</td></tr>
+                                <tr><th>天气</th><td>${oldData.condition}</td></tr>
+                                <tr><th>生成方式</th><td>随机生成</td></tr>
+                            </table>
+                            <div style="background: #ffebee; color: #c62828; padding: 10px; border-radius: 4px;">
+                                可能偏离真实海况
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            resultsDiv.innerHTML = html;
+        }
+        
+        function generateOldVersionData() {
+            // 模拟旧版本的数据生成逻辑
+            const baseWave = 0.8 + Math.random() * 1.5; // 旧版本范围
+            const baseWind = 8 + Math.random() * 10;
+            const baseTemp = 18 + Math.random() * 10;
+            
+            return {
+                waveHeight: Math.round(baseWave * 10) / 10,
+                windSpeed: Math.round(baseWind * 10) / 10,
+                waterTemperature: Math.round(baseTemp * 10) / 10,
+                condition: ['晴朗', '多云', '阴天', '小雨'][Math.floor(Math.random() * 4)]
+            };
+        }
+        
+        function generateReport() {
+            const resultsDiv = document.getElementById('results');
+            
+            // 生成多组数据进行统计分析
+            const testRuns = 20;
+            const statistics = {
+                newVersion: { heights: [], realistic: 0 },
+                oldVersion: { heights: [], realistic: 0 }
+            };
+            
+            for (let i = 0; i < testRuns; i++) {
+                // 测试东沙冲浪公园
+                const newData = calibrationHelper.generateCalibratedMockData(
+                    spots[0].coordinates, 
+                    new Date(), 
+                    1
+                );
+                const oldData = generateOldVersionData();
+                
+                statistics.newVersion.heights.push(newData.windy.waveHeight);
+                statistics.oldVersion.heights.push(oldData.waveHeight);
+                
+                // 检查是否在合理范围内（夏季东沙：0.3-1.2m）
+                if (newData.windy.waveHeight >= 0.3 && newData.windy.waveHeight <= 1.2) {
+                    statistics.newVersion.realistic++;
+                }
+                if (oldData.waveHeight >= 0.3 && oldData.waveHeight <= 1.2) {
+                    statistics.oldVersion.realistic++;
+                }
+            }
+            
+            const newAvg = (statistics.newVersion.heights.reduce((a, b) => a + b, 0) / testRuns).toFixed(2);
+            const oldAvg = (statistics.oldVersion.heights.reduce((a, b) => a + b, 0) / testRuns).toFixed(2);
+            const newRealisticRate = (statistics.newVersion.realistic / testRuns * 100).toFixed(1);
+            const oldRealisticRate = (statistics.oldVersion.realistic / testRuns * 100).toFixed(1);
+            
+            const html = `
+                <div class="result-section">
+                    <h2>📋 统计分析报告</h2>
+                    <p>基于${testRuns}次测试运行的统计结果（东沙冲浪公园夏季数据）</p>
+                    
+                    <div class="comparison-grid">
+                        <div class="data-card realistic">
+                            <h3>✅ 新版本统计</h3>
+                            <div class="wave-height">${newAvg}m</div>
+                            <table class="stats-table">
+                                <tr><th>平均浪高</th><td>${newAvg}m</td></tr>
+                                <tr><th>真实度</th><td>${newRealisticRate}%</td></tr>
+                                <tr><th>最小值</th><td>${Math.min(...statistics.newVersion.heights).toFixed(1)}m</td></tr>
+                                <tr><th>最大值</th><td>${Math.max(...statistics.newVersion.heights).toFixed(1)}m</td></tr>
+                            </table>
+                        </div>
+                        
+                        <div class="data-card old-version">
+                            <h3>❌ 旧版本统计</h3>
+                            <div class="wave-height">${oldAvg}m</div>
+                            <table class="stats-table">
+                                <tr><th>平均浪高</th><td>${oldAvg}m</td></tr>
+                                <tr><th>真实度</th><td>${oldRealisticRate}%</td></tr>
+                                <tr><th>最小值</th><td>${Math.min(...statistics.oldVersion.heights).toFixed(1)}m</td></tr>
+                                <tr><th>最大值</th><td>${Math.max(...statistics.oldVersion.heights).toFixed(1)}m</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="improvement">
+                        <h4>📈 改进效果</h4>
+                        <ul>
+                            <li>真实度提升: ${(newRealisticRate - oldRealisticRate).toFixed(1)}%</li>
+                            <li>平均浪高更合理: ${newAvg}m vs ${oldAvg}m</li>
+                            <li>数据范围更符合季节特征</li>
+                            <li>集成了地理位置和季节因素</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+            
+            resultsDiv.innerHTML = html;
+        }
+        
+        // 页面加载时显示说明
+        window.addEventListener('load', () => {
+            document.getElementById('results').innerHTML = `
+                <div class="reference-data">
+                    <h3>🔧 测试说明</h3>
+                    <p>本测试工具对比修复前后的数据生成效果：</p>
+                    <ul>
+                        <li><strong>新版本：</strong>使用季节性校准，考虑地理位置和时间因素</li>
+                        <li><strong>旧版本：</strong>纯随机生成，可能产生不现实的数据</li>
+                        <li><strong>评估标准：</strong>是否符合真实海况的季节性变化范围</li>
+                    </ul>
+                    <p>点击"运行对比测试"查看单次对比，点击"生成报告"查看统计分析。</p>
+                </div>
+            `;
+        });
+    </script>
+</body>
+</html>

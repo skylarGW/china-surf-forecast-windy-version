@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API操作流程测试</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-section h3 {
+            margin: 0 0 15px 0;
+            color: #1976d2;
+        }
+        .status-display {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status-sim {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        .status-real {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+        .status-error {
+            background: #ffebee;
+            color: #c62828;
+        }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1976d2;
+        }
+        .log {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        .flow-step {
+            padding: 10px;
+            margin: 5px 0;
+            border-left: 4px solid #2196F3;
+            background: #f8f9fa;
+        }
+        .flow-step.success {
+            border-left-color: #4CAF50;
+            background: #e8f5e8;
+        }
+        .flow-step.error {
+            border-left-color: #f44336;
+            background: #ffebee;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 API操作流程测试</h1>
+        <p>测试新的API切换流程：直接显示真实数据，失败时弹出配置对话框</p>
+        
+        <div class="test-section">
+            <h3>📊 当前状态</h3>
+            <div id="currentStatus" class="status-display status-sim">
+                📊 模拟数据模式
+            </div>
+            <div>
+                <strong>API密钥状态：</strong>
+                <span id="apiKeyStatus">未配置</span>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🔧 测试操作</h3>
+            <button onclick="testAPIToggle()">🌊 测试"使用真实数据"按钮</button>
+            <button onclick="testWithValidKey()">✅ 模拟有效API密钥</button>
+            <button onclick="testWithInvalidKey()">❌ 模拟无效API密钥</button>
+            <button onclick="clearAPIKey()">🗑️ 清除API密钥</button>
+            <button onclick="switchToSim()">📊 切换到模拟数据</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>📋 操作流程记录</h3>
+            <div id="flowLog"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🔍 测试日志</h3>
+            <div id="testLog" class="log"></div>
+        </div>
+    </div>
+
+    <script src="data-calibration-helper.js"></script>
+    <script src="windy-data-service.js"></script>
+    <script>
+        let flowSteps = [];
+        
+        function updateStatus() {
+            const statusDiv = document.getElementById('currentStatus');
+            const apiKeyStatus = document.getElementById('apiKeyStatus');
+            const apiKey = localStorage.getItem('windy_api_key');
+            
+            if (dataService.useRealAPI) {
+                statusDiv.textContent = '🌊 Windy真实数据';
+                statusDiv.className = 'status-display status-real';
+            } else {
+                statusDiv.textContent = '📊 模拟数据模式';
+                statusDiv.className = 'status-display status-sim';
+            }
+            
+            apiKeyStatus.textContent = apiKey ? '已配置' : '未配置';
+            apiKeyStatus.style.color = apiKey ? '#4CAF50' : '#f44336';
+        }
+        
+        function addFlowStep(message, type = 'info') {
+            const step = {
+                time: new Date().toLocaleTimeString(),
+                message: message,
+                type: type
+            };
+            flowSteps.push(step);
+            
+            const flowLog = document.getElementById('flowLog');
+            const stepDiv = document.createElement('div');
+            stepDiv.className = `flow-step ${type}`;
+            stepDiv.innerHTML = `<strong>${step.time}</strong> - ${step.message}`;
+            flowLog.appendChild(stepDiv);
+            flowLog.scrollTop = flowLog.scrollHeight;
+        }
+        
+        function addLog(message) {
+            const log = document.getElementById('testLog');
+            const time = new Date().toLocaleTimeString();
+            log.innerHTML += `[${time}] ${message}\n`;
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        async function testAPIToggle() {
+            addFlowStep('用户点击"使用真实数据"按钮', 'info');
+            addLog('开始测试API切换流程...');
+            
+            const apiKey = localStorage.getItem('windy_api_key');
+            
+            if (!apiKey) {
+                addFlowStep('检测到API密钥未配置', 'error');
+                addLog('API密钥未配置，应该弹出配置对话框');
+                showMockConfigDialog();
+                return;
+            }
+            
+            addFlowStep('API密钥已配置，尝试连接Windy API', 'info');
+            addLog('模拟API连接测试...');
+            
+            try {
+                // 模拟API连接测试
+                await simulateAPITest();
+                addFlowStep('API连接成功，切换到真实数据模式', 'success');
+                addLog('API连接成功！');
+                
+                dataService.toggleRealAPI(true);
+                updateStatus();
+                
+            } catch (error) {
+                addFlowStep(`API连接失败: ${error.message}`, 'error');
+                addLog(`API连接失败: ${error.message}`);
+                showMockErrorDialog(error.message);
+            }
+        }
+        
+        async function simulateAPITest() {
+            // 模拟API测试延迟
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            const apiKey = localStorage.getItem('windy_api_key');
+            if (apiKey === 'valid_key') {
+                return true;
+            } else if (apiKey === 'invalid_key') {
+                throw new Error('API密钥无效或已过期');
+            } else {
+                throw new Error('网络连接失败');
+            }
+        }
+        
+        function showMockConfigDialog() {
+            const dialog = document.createElement('div');
+            dialog.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.5); z-index: 10000;
+                display: flex; align-items: center; justify-content: center;
+            `;
+            dialog.innerHTML = `
+                <div style="background: white; padding: 30px; border-radius: 12px; text-align: center; max-width: 400px;">
+                    <h3>🔑 需要配置Windy API密钥</h3>
+                    <p>要使用Windy真实数据，请先配置API密钥：</p>
+                    <div style="margin: 20px 0;">
+                        <button onclick="alert('打开API配置页面'); this.closest('div').remove();" 
+                                style="background: #2196F3; color: white; border: none; padding: 10px 20px; border-radius: 5px; margin: 5px;">
+                            ⚙️ 打开配置页面
+                        </button>
+                        <button onclick="this.closest('div').remove();" 
+                                style="background: #f5f5f5; color: #666; border: none; padding: 10px 20px; border-radius: 5px; margin: 5px;">
+                            取消
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(dialog);
+        }
+        
+        function showMockErrorDialog(errorMessage) {
+            const dialog = document.createElement('div');
+            dialog.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.5); z-index: 10000;
+                display: flex; align-items: center; justify-content: center;
+            `;
+            dialog.innerHTML = `
+                <div style="background: white; padding: 30px; border-radius: 12px; text-align: center; max-width: 500px; border-left: 5px solid #f44336;">
+                    <h3>❌ Windy API连接失败</h3>
+                    <p><strong>错误信息：</strong>${errorMessage}</p>
+                    <p>可能的原因：</p>
+                    <ul style="text-align: left; margin: 15px 0;">
+                        <li>API密钥无效或已过期</li>
+                        <li>网络连接问题</li>
+                        <li>API配额已用完</li>
+                    </ul>
+                    <div style="margin: 20px 0;">
+                        <button onclick="alert('检查API配置'); this.closest('div').remove();" 
+                                style="background: #2196F3; color: white; border: none; padding: 10px 20px; border-radius: 5px; margin: 5px;">
+                            🔧 检查API配置
+                        </button>
+                        <button onclick="switchToSimFromDialog(); this.closest('div').remove();" 
+                                style="background: #f5f5f5; color: #666; border: none; padding: 10px 20px; border-radius: 5px; margin: 5px;">
+                            📊 使用模拟数据
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(dialog);
+        }
+        
+        function switchToSimFromDialog() {
+            addFlowStep('用户选择使用模拟数据', 'info');
+            dataService.toggleRealAPI(false);
+            updateStatus();
+        }
+        
+        function testWithValidKey() {
+            localStorage.setItem('windy_api_key', 'valid_key');
+            addLog('设置有效API密钥: valid_key');
+            updateStatus();
+        }
+        
+        function testWithInvalidKey() {
+            localStorage.setItem('windy_api_key', 'invalid_key');
+            addLog('设置无效API密钥: invalid_key');
+            updateStatus();
+        }
+        
+        function clearAPIKey() {
+            localStorage.removeItem('windy_api_key');
+            addLog('清除API密钥');
+            updateStatus();
+        }
+        
+        function switchToSim() {
+            dataService.toggleRealAPI(false);
+            addFlowStep('手动切换到模拟数据模式', 'info');
+            addLog('切换到模拟数据模式');
+            updateStatus();
+        }
+        
+        // 页面加载时初始化
+        window.addEventListener('load', () => {
+            updateStatus();
+            addLog('测试页面加载完成');
+            addFlowStep('测试环境初始化完成', 'success');
+            
+            // 显示使用说明
+            addLog('=== 测试说明 ===');
+            addLog('1. 点击"测试使用真实数据"按钮模拟用户操作');
+            addLog('2. 使用"模拟有效/无效API密钥"测试不同场景');
+            addLog('3. 观察操作流程记录和对话框弹出');
+        });
+    </script>
+</body>
+</html>

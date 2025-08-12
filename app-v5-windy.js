@@ -122,31 +122,25 @@ class SurfForecastAppV5 {
             const analyses = [];
 
             for (const spot of allSpots) {
-                const data = await dataService.getAllData(spot.coordinates, this.selectedDate);
-                const analysis = await aiAnalyzer.analyzeSpot(spot, data, this.selectedDate);
+                try {
+                    const data = await dataService.getAllData(spot.coordinates, this.selectedDate);
+                    const analysis = await aiAnalyzer.analyzeSpot(spot, data, this.selectedDate);
                 
-                if (analysis && analysis.scores && typeof analysis.scores.totalScore === 'number') {
-                    analyses.push(analysis);
-                } else {
-                    console.warn(`浪点 ${spot.name} 分析结果无效:`, analysis);
-                    analyses.push({
-                        spot: spot,
-                        data: data,
-                        scores: {
-                            waveScore: 50,
-                            windScore: 50,
-                            tideScore: 50,
-                            weatherScore: 50,
-                            totalScore: 50
-                        },
-                        suggestion: {
-                            suggestions: ['数据分析中'],
-                            warnings: [],
-                            equipment: ['数据加载中...'],
-                            skillLevel: ['分析中...'],
-                            summary: '数据分析中...'
-                        }
-                    });
+                    if (analysis && analysis.scores && typeof analysis.scores.totalScore === 'number') {
+                        analyses.push(analysis);
+                    } else {
+                        console.warn(`浪点 ${spot.name} 分析结果无效:`, analysis);
+                        analyses.push(this.getDefaultAnalysis(spot, data));
+                    }
+                } catch (spotError) {
+                    console.error(`浪点 ${spot.name} 数据加载失败:`, spotError);
+                    // 如果是真实API模式下的错误，显示错误信息
+                    if (dataService.useRealAPI) {
+                        this.showAPIErrorForSpot(spot.name, spotError.message);
+                        return; // 停止加载
+                    }
+                    // 模拟数据模式下使用默认数据
+                    analyses.push(this.getDefaultAnalysis(spot, null));
                 }
             }
 
@@ -157,7 +151,11 @@ class SurfForecastAppV5 {
             this.displayGlobalTop3();
         } catch (error) {
             console.error('加载全国TOP3失败:', error);
-            globalAnalysis.innerHTML = '<div class="error">加载失败，请稍后重试</div>';
+            if (dataService.useRealAPI) {
+                globalAnalysis.innerHTML = '<div class="error">Windy API连接失败，请检查API配置</div>';
+            } else {
+                globalAnalysis.innerHTML = '<div class="error">加载失败，请稍后重试</div>';
+            }
         }
     }
 
@@ -212,30 +210,21 @@ class SurfForecastAppV5 {
             const analyses = [];
 
             for (const spot of allSpots) {
-                const data = await dataService.getAllData(spot.coordinates, this.selectedDate);
-                const analysis = await aiAnalyzer.analyzeSpot(spot, data, this.selectedDate);
-                
-                if (analysis && analysis.scores && typeof analysis.scores.totalScore === 'number') {
-                    analyses.push(analysis);
-                } else {
-                    analyses.push({
-                        spot: spot,
-                        data: data,
-                        scores: {
-                            waveScore: 50,
-                            windScore: 50,
-                            tideScore: 50,
-                            weatherScore: 50,
-                            totalScore: 50
-                        },
-                        suggestion: {
-                            suggestions: ['数据分析中'],
-                            warnings: [],
-                            equipment: ['数据加载中...'],
-                            skillLevel: ['分析中...'],
-                            summary: '数据分析中...'
-                        }
-                    });
+                try {
+                    const data = await dataService.getAllData(spot.coordinates, this.selectedDate);
+                    const analysis = await aiAnalyzer.analyzeSpot(spot, data, this.selectedDate);
+                    
+                    if (analysis && analysis.scores && typeof analysis.scores.totalScore === 'number') {
+                        analyses.push(analysis);
+                    } else {
+                        analyses.push(this.getDefaultAnalysis(spot, data));
+                    }
+                } catch (spotError) {
+                    console.error(`浪点 ${spot.name} 数据加载失败:`, spotError);
+                    if (dataService.useRealAPI) {
+                        throw spotError; // 真实API模式下抛出错误
+                    }
+                    analyses.push(this.getDefaultAnalysis(spot, null));
                 }
             }
 
@@ -243,7 +232,11 @@ class SurfForecastAppV5 {
             this.filterSpotsByRegion();
         } catch (error) {
             console.error('加载地区数据失败:', error);
-            spotsGrid.innerHTML = '<div class="error">加载失败，请稍后重试</div>';
+            if (dataService.useRealAPI) {
+                spotsGrid.innerHTML = '<div class="error">Windy API连接失败，请检查API配置</div>';
+            } else {
+                spotsGrid.innerHTML = '<div class="error">加载失败，请稍后重试</div>';
+            }
         }
     }
 
@@ -348,6 +341,15 @@ class SurfForecastAppV5 {
             <!-- 24小时详细数据表格 -->
             <div class="hourly-data-section">
                 <h3 class="hourly-data-title">📊 24小时详细预测数据</h3>
+                <div class="data-explanation">
+                    <p><strong>📊 数据说明：</strong></p>
+                    <ul>
+                        <li><strong>总浪高</strong>：浪点卡片显示的浪高数据，与表格中的总浪高一致</li>
+                        <li><strong>风浪</strong>：由当地风力产生的浪浪，通常占总浪高的60%</li>
+                        <li><strong>涌浪</strong>：由远处风暴产生的长周期浪浪，通常占总浪高的40%</li>
+                        <li><strong>周期</strong>：涌浪的周期，越长越适合冲浪</li>
+                    </ul>
+                </div>
                 <div class="hourly-table-container">
                     ${aiAnalyzer.generateHourlyTableHTML(data.hourly)}
                 </div>
@@ -491,18 +493,17 @@ class SurfForecastAppV5 {
 
     updateDataSourceStatus() {
         const statusElement = document.getElementById('dataSourceIndicator');
-        // 使用dataService的实际状态，而不是localStorage
         const useRealAPI = dataService.useRealAPI;
         
         if (useRealAPI) {
-            statusElement.innerHTML = '🌊 Windy真实API';
+            statusElement.innerHTML = '🌊 Windy真实数据';
             statusElement.className = 'data-source-real';
         } else {
             statusElement.innerHTML = '📊 模拟数据模式';
             statusElement.className = 'data-source-sim';
         }
         
-        console.log(`🔄 状态更新: ${useRealAPI ? 'Windy真实API' : '模拟数据'}`);
+        console.log(`🔄 状态更新: ${useRealAPI ? 'Windy真实数据' : '模拟数据'}`);
     }
 
     toggleCalibration() {
@@ -529,18 +530,106 @@ class SurfForecastAppV5 {
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
         notification.textContent = message;
+        
+        const colors = {
+            'error': '#f44336',
+            'success': '#4CAF50', 
+            'info': '#2196F3',
+            'warning': '#FF9800'
+        };
+        
         notification.style.cssText = `
             position: fixed; top: 20px; right: 20px; z-index: 10000;
             padding: 15px 20px; border-radius: 8px; color: white;
-            background: ${type === 'error' ? '#f44336' : '#4CAF50'};
+            background: ${colors[type] || '#2196F3'};
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease-out;
         `;
         document.body.appendChild(notification);
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.remove();
             }
-        }, 3000);
+        }, type === 'error' ? 5000 : 3000);
+    }
+
+    showAPIConfigDialog() {
+        const dialog = document.createElement('div');
+        dialog.className = 'api-config-dialog';
+        dialog.innerHTML = `
+            <div class="dialog-overlay">
+                <div class="dialog-content">
+                    <h3>🔑 需要配置Windy API密钥</h3>
+                    <p>要使用Windy真实数据，请先配置API密钥：</p>
+                    <div class="dialog-buttons">
+                        <button onclick="openConfig(); this.closest('.api-config-dialog').remove();">⚙️ 打开配置页面</button>
+                        <button onclick="this.closest('.api-config-dialog').remove();">取消</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(dialog);
+    }
+
+    showAPIErrorDialog(errorMessage) {
+        const dialog = document.createElement('div');
+        dialog.className = 'api-error-dialog';
+        dialog.innerHTML = `
+            <div class="dialog-overlay">
+                <div class="dialog-content error">
+                    <h3>❌ Windy API连接失败</h3>
+                    <p><strong>错误信息：</strong>${errorMessage}</p>
+                    <p>可能的原因：</p>
+                    <ul>
+                        <li>API密钥无效或已过期</li>
+                        <li>网络连接问题</li>
+                        <li>API配额已用完</li>
+                    </ul>
+                    <div class="dialog-buttons">
+                        <button onclick="openConfig(); this.closest('.api-error-dialog').remove();">🔧 检查API配置</button>
+                        <button onclick="this.switchToSimulation(); this.closest('.api-error-dialog').remove();">📊 使用模拟数据</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(dialog);
+    }
+
+    switchToSimulation() {
+        dataService.toggleRealAPI(false);
+        this.updateDataSourceStatus();
+        this.loadData();
+        this.showNotification('📊 已切换到模拟数据模式', 'info');
+    }
+
+    getDefaultAnalysis(spot, data) {
+        return {
+            spot: spot,
+            data: data || {
+                windy: { waveHeight: 1.0, windSpeed: 8, wavePeriod: 8 },
+                ocean: { waterTemperature: 20, tideHeight: 2.0, tideLevel: '中潮' },
+                weather: { condition: '多云', temperature: 22, humidity: 70, visibility: 10 },
+                hourly: { tideSchedule: [] }
+            },
+            scores: {
+                waveScore: 50,
+                windScore: 50,
+                tideScore: 50,
+                weatherScore: 50,
+                totalScore: 50
+            },
+            suggestion: {
+                suggestions: ['数据加载中'],
+                warnings: [],
+                equipment: ['数据加载中...'],
+                skillLevel: ['分析中...'],
+                summary: '数据分析中...'
+            }
+        };
+    }
+
+    showAPIErrorForSpot(spotName, errorMessage) {
+        this.showNotification(`浪点 ${spotName} 数据加载失败: ${errorMessage}`, 'error');
     }
 
     formatTideSchedule(schedule) {
@@ -589,21 +678,46 @@ function toggleCalibration() {
     }
 }
 
-function toggleRealAPI() {
+async function toggleRealAPI() {
     const useRealAPI = localStorage.getItem('use_real_api') !== 'true';
-    dataService.toggleRealAPI(useRealAPI);
     
-    if (window.app) {
-        app.updateDataSourceStatus();
-        app.loadData();
-    }
-    
-    const message = useRealAPI ? 
-        '✅ 已启用Windy真实API！' : 
-        '📊 已切换到模拟数据';
-    
-    if (window.app) {
-        app.showNotification(message);
+    if (useRealAPI) {
+        // 检查API密钥
+        const apiKey = localStorage.getItem('windy_api_key');
+        if (!apiKey) {
+            if (window.app) {
+                app.showAPIConfigDialog();
+            }
+            return;
+        }
+        
+        // 尝试连接真实API
+        if (window.app) {
+            app.showNotification('🔄 正在连接Windy API...', 'info');
+        }
+        
+        try {
+            await dataService.testWindyConnection();
+            dataService.toggleRealAPI(true);
+            
+            if (window.app) {
+                app.updateDataSourceStatus();
+                await app.loadData();
+                app.showNotification('✅ Windy真实API连接成功！', 'success');
+            }
+        } catch (error) {
+            console.error('Windy API连接失败:', error);
+            if (window.app) {
+                app.showAPIErrorDialog(error.message);
+            }
+        }
+    } else {
+        dataService.toggleRealAPI(false);
+        if (window.app) {
+            app.updateDataSourceStatus();
+            app.loadData();
+            app.showNotification('📊 已切换到模拟数据', 'info');
+        }
     }
 }
 
@@ -619,6 +733,14 @@ function checkDependencies() {
         typeof dataService !== 'undefined' && 
         typeof aiAnalyzer !== 'undefined' && 
         typeof UTILS !== 'undefined') {
+        
+        // 检查校准助手是否加载
+        if (typeof calibrationHelper !== 'undefined') {
+            console.log('✅ 数据校准助手已加载');
+        } else {
+            console.warn('⚠️ 数据校准助手未加载，使用默认数据生成');
+        }
+        
         app = new SurfForecastAppV5();
         console.log('✅ 应用启动成功');
     } else {
@@ -725,6 +847,32 @@ const enhancedStyles = `
     border-left: 5px solid #2196F3;
 }
 
+.data-explanation {
+    background: #e3f2fd;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border-left: 3px solid #1976d2;
+}
+
+.data-explanation p {
+    margin: 0 0 10px 0;
+    color: #1976d2;
+    font-weight: bold;
+}
+
+.data-explanation ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.data-explanation li {
+    margin: 5px 0;
+    color: #424242;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
 .hourly-data-title {
     color: #1976d2;
     margin-bottom: 15px;
@@ -761,6 +909,12 @@ const enhancedStyles = `
     padding: 6px;
     text-align: center;
     border-bottom: 1px solid #eee;
+}
+
+.hourly-table td:nth-child(2) {
+    background: #e8f5e8;
+    font-weight: bold;
+    color: #2e7d32;
 }
 
 .hourly-table tr:nth-child(even) {

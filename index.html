@@ -21,7 +21,7 @@
                 <span id="dataSourceIndicator">📊 模拟数据模式</span>
                 <button class="config-btn" onclick="openConfig()">⚙️ API配置</button>
                 <button class="config-btn" onclick="toggleCalibration()" id="calibrationBtn">🇨🇳 校准开启</button>
-                <button class="config-btn api-toggle-btn" onclick="toggleRealAPI()" id="apiToggleBtn">🌊 切换API</button>
+                <button class="config-btn api-toggle-btn" onclick="toggleRealAPI()" id="apiToggleBtn">🌊 使用真实数据</button>
             </div>
         </header>
 
@@ -76,6 +76,7 @@
     </div>
 
     <!-- 修复后的脚本引用 -->
+    <script src="data-calibration-helper.js"></script>
     <script src="windy-data-service.js"></script>
     <script src="app-v5-windy.js"></script>
 </body>
