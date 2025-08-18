@@ -733,10 +733,17 @@ class ChinaCalibratedDataService {
             throw new Error('API密钥未配置');
         }
         
+        // 检查fetch支持
+        if (!window.fetch) {
+            throw new Error('浏览器不支持fetch API');
+        }
+        
         const response = await fetch('https://api.windy.com/api/point-forecast/v2', {
             method: 'POST',
+            mode: 'cors',
             headers: {
                 'Content-Type': 'application/json',
+                'Accept': 'application/json'
             },
             body: JSON.stringify({
                 key: this.windyApiKey,

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.windy.com https:; font-src 'self'; frame-src 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https: wss: data:; font-src 'self' data:; frame-src 'self';">
     <title>🏄寻找中国最佳冲浪点</title>
     <link rel="stylesheet" href="styles-v3.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏄</text></svg>">
@@ -75,9 +75,26 @@
         </footer>
     </div>
 
+    <!-- 浏览器兼容性检查 -->
+    <script>
+        // 检查浏览器兼容性
+        if (!window.fetch) {
+            document.body.innerHTML = '<div style="text-align:center;padding:50px;font-family:Arial;"><h2>浏览器不兼容</h2><p>请使用现代浏览器访问此网站</p></div>';
+        }
+        
+        // 错误处理
+        window.addEventListener('error', function(e) {
+            console.error('页面错误:', e.error);
+        });
+        
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('未处理的Promise错误:', e.reason);
+        });
+    </script>
+    
     <!-- 修复后的脚本引用 -->
-    <script src="data-calibration-helper.js"></script>
-    <script src="windy-data-service.js"></script>
-    <script src="app-v5-windy.js"></script>
+    <script src="data-calibration-helper.js" onerror="console.error('校准助手加载失败')"></script>
+    <script src="windy-data-service.js" onerror="console.error('数据服务加载失败')"></script>
+    <script src="app-v5-windy.js" onerror="console.error('主应用加载失败')"></script>
 </body>
 </html>
